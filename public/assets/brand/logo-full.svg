@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 80">
+    <defs>
+        <linearGradient id="gold-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#D4AF37;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#AA8C2C;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <!-- Logo Icon -->
+    <circle cx="40" cy="40" r="35" fill="#003366" />
+    <circle cx="40" cy="40" r="32" fill="white" />
+    <circle cx="40" cy="40" r="28" fill="#003366" />
+    <path d="M40 15 L45 25 L55 25 L47 32 L50 42 L40 36 L30 42 L33 32 L25 25 L35 25 Z" fill="url(#gold-gradient)" />
+    <text x="40" y="65" font-family="serif" font-weight="bold" font-size="14" fill="white" text-anchor="middle">KIBIHAS</text>
+    
+    <!-- Text -->
+    <text x="85" y="35" font-family="sans-serif" font-weight="bold" font-size="24" fill="#003366">KIBIHAS</text>
+    <text x="85" y="55" font-family="sans-serif" font-size="12" fill="#555">Kibosho Institute of Health</text>
+    <text x="85" y="68" font-family="sans-serif" font-size="12" fill="#555">and Allied Sciences</text>
+</svg>

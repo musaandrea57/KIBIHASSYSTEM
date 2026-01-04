@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <circle cx="100" cy="100" r="95" fill="#003366" stroke="#FFD700" stroke-width="5"/>
+  <path d="M50 140 Q100 160 150 140" stroke="#FFD700" stroke-width="5" fill="none"/>
+  <rect x="70" y="50" width="60" height="80" fill="#FFFFFF"/>
+  <rect x="90" y="60" width="20" height="60" fill="#FFD700"/>
+  <rect x="70" y="80" width="60" height="20" fill="#FFD700"/>
+  <text x="100" y="180" font-family="serif" font-size="14" fill="#FFFFFF" text-anchor="middle" font-weight="bold">KIBIHAS</text>
+  <text x="100" y="35" font-family="serif" font-size="10" fill="#FFD700" text-anchor="middle">EST. 2024</text>
+</svg>

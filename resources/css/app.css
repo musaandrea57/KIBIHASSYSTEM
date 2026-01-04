@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+    .pattern-grid-lg {
+        background-image: radial-gradient(currentColor 1px, transparent 1px);
+        background-size: 2rem 2rem;
+    }
+}
