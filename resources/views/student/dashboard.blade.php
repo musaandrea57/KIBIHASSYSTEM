@@ -235,11 +235,11 @@
                             @foreach($recentResults as $result)
                                 <div class="flex justify-between items-center bg-gray-50 p-3 rounded">
                                     <div>
-                                        <div class="text-sm font-bold text-gray-700">{{ $result->module->code }}</div>
-                                        <div class="text-xs text-gray-500">{{ Str::limit($result->module->name, 20) }}</div>
+                                        <div class="text-sm font-bold text-gray-700">{{ $result->moduleOffering->module->code }}</div>
+                                        <div class="text-xs text-gray-500">{{ Str::limit($result->moduleOffering->module->name, 20) }}</div>
                                     </div>
                                     <div class="text-right">
-                                        <div class="text-lg font-bold {{ $result->remarks == 'Pass' ? 'text-green-600' : 'text-red-600' }}">{{ $result->grade }}</div>
+                                        <div class="text-lg font-bold {{ $result->remark == 'Pass' ? 'text-green-600' : 'text-red-600' }}">{{ $result->grade }}</div>
                                     </div>
                                 </div>
                             @endforeach

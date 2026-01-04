@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CourseRegistration;
 use App\Models\Module;
 use App\Models\Student;
-use App\Models\Result;
+use App\Models\ModuleResult;
 use App\Models\NhifMembership;
 use App\Services\FeeClearanceService;
 use Illuminate\Http\Request;
@@ -58,11 +58,11 @@ class DashboardController extends Controller
         }
         
         // Get recent results
-        $recentResults = Result::where('student_id', $student->id)
-            ->where('is_published', true)
+        $recentResults = ModuleResult::where('student_id', $student->id)
+            ->where('status', 'published')
             ->latest()
             ->take(5)
-            ->with('module')
+            ->with('moduleOffering.module')
             ->get();
 
         // Check fee clearance status
@@ -79,9 +79,9 @@ class DashboardController extends Controller
         $user = Auth::user();
         $student = $user->student;
         
-        $results = Result::where('student_id', $student->id)
-            ->where('is_published', true)
-            ->with(['module', 'academicYear', 'semester'])
+        $results = ModuleResult::where('student_id', $student->id)
+            ->where('status', 'published')
+            ->with(['moduleOffering.module', 'academicYear', 'semester'])
             ->orderBy('academic_year_id', 'desc')
             ->orderBy('semester_id', 'desc')
             ->get()

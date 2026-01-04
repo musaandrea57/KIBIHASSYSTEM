@@ -27,23 +27,23 @@
                                         @foreach($sessionResults as $result)
                                             <tr>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                    {{ $result->module->code }}
+                                                    {{ $result->moduleOffering->module->code }}
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {{ $result->module->name }}
+                                                    {{ $result->moduleOffering->module->name }}
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {{ $result->module->credits }}
+                                                    {{ $result->moduleOffering->module->credits }}
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
                                                     {{ $result->grade }}
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {{ $result->grade_points }}
+                                                    {{ $result->grade_point }}
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap">
-                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $result->remarks == 'Pass' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                                        {{ $result->remarks }}
+                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $result->remark == 'Pass' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                                        {{ $result->remark }}
                                                     </span>
                                                 </td>
                                             </tr>
