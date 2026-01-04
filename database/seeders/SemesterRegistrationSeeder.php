@@ -21,14 +21,45 @@ class SemesterRegistrationSeeder extends Seeder
 {
     public function run()
     {
-        // 1. Ensure Credit Rules Exist for all Programs
+        $systemUser = $this->ensureSystemUser();
+        $programs = $this->ensurePrograms();
+        $this->ensureCreditRules($programs);
+        
+        $year = $this->ensureActiveAcademicYear();
+        $semester = $this->ensureSemester();
+        
+        $this->ensureRegistrationDeadline($year, $semester, $systemUser);
+        
+        $student = $this->ensureTestStudent($programs->first(), $year, $semester);
+        
+        $modules = $this->createModulesAndOfferings($student, $year, $semester);
+        
+        $this->createApprovedRegistration($student, $year, $semester, $systemUser, $modules);
+    }
+
+    private function ensureSystemUser()
+    {
+        return User::firstOrCreate(
+            ['email' => 'admin@kibihas.ac.tz'],
+            [
+                'name' => 'System Admin',
+                'password' => Hash::make('password'),
+            ]
+        );
+    }
+
+    private function ensurePrograms()
+    {
         $programs = Program::all();
         if ($programs->isEmpty()) {
-            // Create dummy program if none
-            $program = Program::create(['code' => 'CS', 'name' => 'Computer Science', 'department_id' => 1]); // Assuming dept 1 exists or is nullable, adjust if needed.
-            $programs = collect([$program]);
+            $program = Program::create(['code' => 'CS', 'name' => 'Computer Science']);
+            return collect([$program]);
         }
+        return $programs;
+    }
 
+    private function ensureCreditRules($programs)
+    {
         foreach ($programs as $program) {
             foreach ([4, 5, 6] as $level) {
                 ProgrammeLevelRule::firstOrCreate(
@@ -43,8 +74,10 @@ class SemesterRegistrationSeeder extends Seeder
                 );
             }
         }
+    }
 
-        // 2. Ensure Active Academic Year and Semester
+    private function ensureActiveAcademicYear()
+    {
         $year = AcademicYear::where('is_active', true)->first();
         if (!$year) {
             $year = AcademicYear::create([
@@ -54,21 +87,22 @@ class SemesterRegistrationSeeder extends Seeder
                 'is_active' => true,
             ]);
         }
+        return $year;
+    }
 
-        // Semesters are now generic (e.g. Semester 1, Semester 2)
-        $semester = Semester::where('name', 'Semester 1')->first();
-        if (!$semester) {
-            $semester = Semester::create([
-                'name' => 'Semester 1',
-                // 'academic_year_id' => $year->id, // Removed in migration
-                // 'start_date' => Carbon::now()->subMonths(1), // Removed/Ignored
-                // 'end_date' => Carbon::now()->addMonths(3), // Removed/Ignored
-                'is_active' => true, // Assuming this flag denotes "current semester type"
+    private function ensureSemester()
+    {
+        return Semester::firstOrCreate(
+            ['name' => 'Semester 1'],
+            [
+                'is_active' => true,
                 'number' => 1,
-            ]);
-        }
+            ]
+        );
+    }
 
-        // 3. Create Registration Deadline
+    private function ensureRegistrationDeadline($year, $semester, $systemUser)
+    {
         SemesterRegistrationDeadline::firstOrCreate(
             [
                 'academic_year_id' => $year->id,
@@ -77,11 +111,13 @@ class SemesterRegistrationSeeder extends Seeder
             [
                 'start_date' => Carbon::now()->subWeeks(2),
                 'end_date' => Carbon::now()->addWeeks(2),
-                'created_by' => User::first()->id ?? 1, // Fallback to ID 1
+                'created_by' => $systemUser->id,
             ]
         );
+    }
 
-        // 4. Create a Test Student (if not exists)
+    private function ensureTestStudent($program, $year, $semester)
+    {
         $studentUser = User::where('email', 'student@kibihas.ac.tz')->first();
         if (!$studentUser) {
             $studentUser = User::create([
@@ -89,10 +125,12 @@ class SemesterRegistrationSeeder extends Seeder
                 'email' => 'student@kibihas.ac.tz',
                 'password' => Hash::make('password'),
             ]);
-            $studentUser->assignRole('student');
+            if (\Spatie\Permission\Models\Role::where('name', 'student')->exists()) {
+                $studentUser->assignRole('student');
+            }
         }
 
-        $student = Student::firstOrCreate(
+        return Student::firstOrCreate(
             ['user_id' => $studentUser->id],
             [
                 'registration_number' => 'TEST/001/2025',
@@ -100,15 +138,17 @@ class SemesterRegistrationSeeder extends Seeder
                 'last_name' => 'Student',
                 'gender' => 'Male',
                 'date_of_birth' => '2000-01-01',
-                'program_id' => $programs->first()->id,
+                'program_id' => $program->id,
                 'current_nta_level' => 4,
                 'current_academic_year_id' => $year->id,
                 'current_semester_id' => $semester->id,
                 'status' => 'active',
             ]
         );
+    }
 
-        // 5. Create Modules, Offerings, and Assignments
+    private function createModulesAndOfferings($student, $year, $semester)
+    {
         $moduleData = [
             ['code' => 'CSU04101', 'name' => 'Basic Computing', 'credits' => 10],
             ['code' => 'CSU04102', 'name' => 'Communication Skills', 'credits' => 10],
@@ -116,6 +156,7 @@ class SemesterRegistrationSeeder extends Seeder
 
         $modules = collect();
         $teacher = User::role('teacher')->first() ?? User::first();
+        $assigner = User::first() ?? $teacher;
 
         foreach ($moduleData as $data) {
             $module = Module::firstOrCreate(
@@ -124,11 +165,12 @@ class SemesterRegistrationSeeder extends Seeder
                     'name' => $data['name'],
                     'credits' => $data['credits'],
                     'program_id' => $student->program_id,
+                    'nta_level' => 4,
+                    'semester_number' => 1,
                 ]
             );
             $modules->push($module);
 
-            // Create Offering
             $offering = ModuleOffering::firstOrCreate(
                 [
                     'module_id' => $module->id,
@@ -141,17 +183,13 @@ class SemesterRegistrationSeeder extends Seeder
                 ]
             );
 
-            // Create Teacher Assignment
-            // Using new schema from setup_module_2_tables.php: 
-            // module_offering_id, teacher_user_id, assigned_by_user_id
-            
             \Illuminate\Support\Facades\DB::table('module_assignments')->updateOrInsert(
                 [
                     'module_offering_id' => $offering->id,
                     'teacher_user_id' => $teacher->id,
                 ],
                 [
-                    'assigned_by_user_id' => User::first()->id ?? 1, // Fallback to ID 1
+                    'assigned_by_user_id' => $assigner->id,
                     'assigned_at' => now(),
                     'status' => 'active',
                     'created_at' => now(),
@@ -159,8 +197,11 @@ class SemesterRegistrationSeeder extends Seeder
                 ]
             );
         }
-        
-        // 6. Create Approved Registration
+        return $modules;
+    }
+
+    private function createApprovedRegistration($student, $year, $semester, $systemUser, $modules)
+    {
         $registration = SemesterRegistration::firstOrCreate(
             [
                 'student_id' => $student->id,
@@ -173,7 +214,7 @@ class SemesterRegistrationSeeder extends Seeder
                 'status' => 'approved',
                 'submitted_at' => Carbon::now()->subDays(1),
                 'approved_at' => Carbon::now(),
-                'approved_by' => User::role('admin')->first()->id ?? 1,
+                'approved_by' => $systemUser->id,
             ]
         );
 
@@ -192,7 +233,6 @@ class SemesterRegistrationSeeder extends Seeder
                     ],
                     [
                         'credits_snapshot' => $module->credits,
-                        // 'is_core' => true, 
                     ]
                 );
             }

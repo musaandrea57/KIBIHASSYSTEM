@@ -35,7 +35,7 @@
                 </ol>
 
                 <div class="mt-8">
-                    <a href="{{ route('application.create') }}" class="inline-block bg-secondary text-primary-900 font-bold py-3 px-8 rounded shadow hover:bg-secondary-600 transition">Start Online Application</a>
+                    <a href="{{ route('application.register') }}" class="inline-block bg-secondary text-primary-900 font-bold py-3 px-8 rounded shadow hover:bg-secondary-600 transition">Start Online Application</a>
                 </div>
             </div>
 

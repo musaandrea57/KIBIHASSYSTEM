@@ -12,6 +12,7 @@ use App\Services\FeeClearanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class DashboardController extends Controller
 {
@@ -94,7 +95,27 @@ class DashboardController extends Controller
 
     public function continuousAssessment()
     {
-        return view('student.continuous_assessment');
+        $user = Auth::user();
+        $student = $user->student;
+        
+        $activeYear = $student->currentAcademicYear;
+        $activeSemester = $student->currentSemester;
+
+        if (!$activeYear || !$activeSemester) {
+            return redirect()->back()->with('error', 'Academic session not active.');
+        }
+
+        $results = ModuleResult::where('student_id', $student->id)
+            ->where('academic_year_id', $activeYear->id)
+            ->where('semester_id', $activeSemester->id)
+            ->with([
+                'moduleOffering.module', 
+                'continuousAssessments.assessmentType',
+                'moduleOffering' // to access coursework_released
+            ])
+            ->get();
+
+        return view('student.academic.continuous_assessment', compact('student', 'results', 'activeYear', 'activeSemester'));
     }
 
     public function transcript()
@@ -162,5 +183,18 @@ class DashboardController extends Controller
         }
 
         return back()->with('success', 'Profile photo updated.');
+    }
+
+    public function downloadProfile()
+    {
+        $user = Auth::user();
+        $student = $user->student;
+
+        if (!$student) {
+            return back()->with('error', 'Student record not found.');
+        }
+
+        $pdf = Pdf::loadView('student.profile_pdf', compact('student'));
+        return $pdf->download('student-profile-' . $student->registration_number . '.pdf');
     }
 }

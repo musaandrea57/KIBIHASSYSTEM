@@ -15,6 +15,12 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
+
+                    @role('principal')
+                    <x-nav-link :href="route('principal.communication.index')" :active="request()->routeIs('principal.communication.*')">
+                        {{ __('Communication') }}
+                    </x-nav-link>
+                    @endrole
                     
                     @if(Auth::user()->hasAnyPermission(['view_finance_reports', 'manage_fee_structures', 'view_invoices', 'record_payments']))
                     <div class="hidden sm:flex sm:items-center sm:ml-6">
@@ -201,6 +207,12 @@
                     <span class="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{{ Auth::user()->unreadMessagesCount() }}</span>
                 @endif
             </x-responsive-nav-link>
+            
+            @role('principal')
+            <x-responsive-nav-link :href="route('principal.communication.index')" :active="request()->routeIs('principal.communication.*')">
+                {{ __('Communication (Principal)') }}
+            </x-responsive-nav-link>
+            @endrole
         </div>
 
         <!-- Responsive Settings Options -->

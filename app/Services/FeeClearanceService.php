@@ -14,6 +14,15 @@ use Carbon\Carbon;
 class FeeClearanceService
 {
     /**
+     * Get outstanding balance for a specific period.
+     */
+    public function outstandingBalance(Student $student, AcademicYear $academicYear, Semester $semester): float
+    {
+        $calculation = $this->calculateForStudent($student, $academicYear, $semester);
+        return $calculation['total_balance'];
+    }
+
+    /**
      * Calculate and return fee clearance status for a student in a specific period.
      * This method calculates fresh values but does NOT save them unless refreshSnapshot is called.
      * 
@@ -29,19 +38,12 @@ class FeeClearanceService
             ->with(['items.feeItem'])
             ->get();
 
-        // DEBUG
-        echo "DEBUG: Calculating for Student {$student->id}, AY {$academicYear->id}, Sem {$semester->id}\n";
-        echo "DEBUG: Found " . $invoices->count() . " invoices.\n";
-
         $totalInvoiced = 0;
         $totalPaid = 0;
         $totalBalance = 0;
         $mandatoryItemsPaid = true;
 
         foreach ($invoices as $invoice) {
-            // DEBUG
-            echo "DEBUG: Invoice {$invoice->invoice_number} - Subtotal: {$invoice->subtotal}, Paid: {$invoice->total_paid}, Balance: {$invoice->balance}\n";
-            
             $totalInvoiced += $invoice->subtotal;
             $totalPaid += $invoice->total_paid;
             $totalBalance += $invoice->balance;

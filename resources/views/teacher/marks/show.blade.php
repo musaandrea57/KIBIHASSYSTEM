@@ -48,6 +48,14 @@
             </div>
         </div>
         <div class="flex gap-2">
+            <!-- Toggle Release Button -->
+            <form action="{{ route('teacher.marks.toggle-release', $offering->id) }}" method="POST" class="inline">
+                @csrf
+                <button type="submit" class="px-4 py-2 {{ $offering->coursework_released ? 'bg-amber-600 hover:bg-amber-700' : 'bg-gray-600 hover:bg-gray-700' }} border border-transparent rounded-md text-sm font-medium text-white" title="{{ $offering->coursework_released ? 'Click to Hide Coursework from Students' : 'Click to Release Coursework to Students' }}">
+                    {{ $offering->coursework_released ? 'Hide Coursework' : 'Release Coursework' }}
+                </button>
+            </form>
+
             <button @click="showImportModal = true" class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
                 Import Excel
             </button>

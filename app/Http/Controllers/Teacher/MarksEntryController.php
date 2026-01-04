@@ -20,6 +20,8 @@ use App\Exports\MarksEntryExport;
 use App\Imports\MarksEntryImport;
 use Maatwebsite\Excel\Facades\Excel;
 
+use Illuminate\Support\Facades\Log;
+
 class MarksEntryController extends Controller
 {
     protected $resultsService;
@@ -176,10 +178,34 @@ class MarksEntryController extends Controller
 
                 // Final Compute via Service
                 $this->resultsService->computeModuleResult($result);
+
+                // Log coursework_uploaded / updated
+                $eventType = $result->wasRecentlyCreated ? 'coursework_uploaded' : 'coursework_updated';
+                
+                Log::info($eventType, [
+                    'user_id' => Auth::id(),
+                    'student_id' => $studentId,
+                    'module_id' => $offering->module_id,
+                    'academic_year_id' => $offering->academic_year_id,
+                    'semester_id' => $offering->semester_id,
+                    'timestamp' => now(),
+                ]);
             }
         });
         
-        return back()->with('success', 'Marks saved and computed successfully.');
+        return back()->with('success', 'Marks saved and computed successfully. Note: Students can view coursework only if fee-cleared (policy controlled) and results are released.');
+    }
+    
+    public function toggleRelease(Request $request, $offeringId)
+    {
+        $offering = ModuleOffering::findOrFail($offeringId);
+        
+        // Toggle
+        $offering->coursework_released = !$offering->coursework_released;
+        $offering->save();
+        
+        $status = $offering->coursework_released ? 'released to' : 'hidden from';
+        return back()->with('success', "Coursework results are now $status students.");
     }
     
     private function saveAssessment($result, $code, $name, $mark) {

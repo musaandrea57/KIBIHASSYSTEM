@@ -5,127 +5,241 @@ namespace App\Http\Controllers;
 use App\Models\Application;
 use App\Models\Program;
 use App\Models\User;
+use App\Models\Document;
+use App\Models\AcademicYear;
+use App\Http\Requests\Application\StoreStep1Request;
+use App\Http\Requests\Application\StoreStep2Request;
+use App\Http\Requests\Application\StoreStep3Request;
+use App\Http\Requests\Application\StoreStep4Request;
+use App\Http\Requests\Application\StoreStep5Request;
+use App\Http\Requests\Application\StoreStep6Request;
+use App\Http\Requests\Application\StoreStep7Request;
+use App\Http\Requests\Application\StoreStep8Request;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules;
+use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ApplicationController extends Controller
 {
-    public function create()
+    // Map steps to view names and validation rules (conceptually)
+    protected $totalSteps = 8;
+
+    /**
+     * Step 1: Account Creation (Public)
+     */
+    public function showStep1()
     {
-        $programs = Program::all();
-        return view('application.create', compact('programs'));
+        if (Auth::check()) {
+            /** @var \App\Models\User $user */
+            $user = Auth::user();
+            if ($user->hasRole('applicant')) {
+                $application = Application::where('user_id', Auth::id())->latest()->first();
+                if ($application && $application->status === 'draft') {
+                    return redirect()->route('application.step', ['step' => $application->current_step]);
+                }
+            }
+        }
+        return view('application.steps.step1', ['step' => 1]);
     }
 
-    public function store(Request $request)
+    public function storeStep1(StoreStep1Request $request)
     {
-        $request->validate([
-            // Personal
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'phone' => 'required|string|max:20',
-            'dob' => 'required|date',
-            'gender' => 'required|string|in:Male,Female',
-            'nationality' => 'required|string',
-            
-            // Account
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+        DB::transaction(function () use ($request) {
+            // 1. Create User
+            $user = User::create([
+                'name' => $request->first_name . ' ' . $request->last_name,
+                'email' => $request->email,
+                'phone' => $request->phone, // Ensure user table has phone or remove this
+                'password' => Hash::make($request->password),
+            ]);
+            $user->assignRole('applicant');
 
-            // Program
-            'program_id' => 'required|exists:programs,id',
+            // 2. Create Draft Application
+            Application::create([
+                'user_id' => $user->id,
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
+                // store phone/email in application too for redundancy/snapshot
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'status' => 'draft',
+                'current_step' => 2,
+                // Initialize required fields with null or defaults to avoid SQL errors if strict
+                'program_id' => 1, // Placeholder, updated in Step 5
+            ]);
 
-            // Education
-            'index_number' => 'required|string',
-            'school_name' => 'required|string',
-            'completion_year' => 'required|integer|min:2000|max:' . (date('Y')),
+            Auth::login($user);
+        });
 
-            // Documents
-            'passport_photo' => 'required|image|max:2048', // 2MB
-            'csee_certificate' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120', // 5MB
-            'birth_certificate' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
+        return redirect()->route('application.step', ['step' => 2]);
+    }
+
+    /**
+     * Generic Step Handler (Protected)
+     */
+    public function showStep($step)
+    {
+        $step = (int)$step;
+        if ($step < 2 || $step > $this->totalSteps) {
+            return redirect()->route('application.status');
+        }
+
+        $application = $this->getApplication();
+        
+        // Prevent skipping ahead
+        if ($step > $application->current_step) {
+            return redirect()->route('application.step', ['step' => $application->current_step]);
+        }
+
+        // Load necessary data for specific steps
+        $data = compact('application', 'step');
+        
+        if ($step == 5) {
+            $data['programs'] = Program::all(); // Assuming all programs are active if no 'active' column
+            $data['academicYears'] = AcademicYear::where('is_active', true)->get();
+        }
+
+        return view('application.steps.step' . $step, $data);
+    }
+
+    public function storeStep2(StoreStep2Request $request)
+    {
+        $application = $this->getApplication();
+        $application->update($request->validated());
+        return $this->advanceStep($application, 2);
+    }
+
+    public function storeStep3(StoreStep3Request $request)
+    {
+        $application = $this->getApplication();
+        $application->update($request->validated());
+        return $this->advanceStep($application, 3);
+    }
+
+    public function storeStep4(StoreStep4Request $request)
+    {
+        $application = $this->getApplication();
+        $application->update(['education_background' => $request->validated()]);
+        return $this->advanceStep($application, 4);
+    }
+
+    public function storeStep5(StoreStep5Request $request)
+    {
+        $application = $this->getApplication();
+        $application->update($request->validated());
+        return $this->advanceStep($application, 5);
+    }
+
+    public function storeStep6(StoreStep6Request $request)
+    {
+        $application = $this->getApplication();
+        $validated = $request->validated();
+        
+        $application->update([
+            'nhif_card_number' => $validated['nhif_card_number'],
+            'has_disability' => $request->has('has_disability'), // boolean check
+            'disability_details' => $validated['disability_details'] ?? null,
+            'medical_conditions' => $validated['medical_conditions'],
+            'emergency_contact' => $validated['emergency_contact'],
         ]);
+        return $this->advanceStep($application, 6);
+    }
 
-        // 1. Create User
-        $user = User::create([
-            'name' => $request->first_name . ' ' . $request->last_name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
-        $user->assignRole('applicant');
+    public function storeStep7(StoreStep7Request $request)
+    {
+        $application = $this->getApplication();
+        
+        $types = ['birth_certificate', 'academic_certificate', 'nida_id', 'passport_photo'];
+        foreach ($types as $type) {
+            if ($request->hasFile($type)) {
+                $file = $request->file($type);
+                $path = $file->store('applications/' . $application->id, 'public');
+                
+                // Use updateOrCreate or create new document record
+                $application->uploadedDocuments()->updateOrCreate(
+                    ['type' => $type],
+                    [
+                        'path' => $path,
+                        'original_name' => $file->getClientOriginalName(),
+                        'mime_type' => $file->getMimeType(),
+                        'size_kb' => round($file->getSize() / 1024),
+                        'status' => 'pending'
+                    ]
+                );
+            }
+        }
+        
+        // Check if all required documents are present
+        $requiredDocs = ['birth_certificate', 'academic_certificate', 'nida_id', 'passport_photo'];
+        $uploadedTypes = $application->uploadedDocuments()->pluck('type')->toArray();
+        
+        $missingDocs = array_diff($requiredDocs, $uploadedTypes);
+        
+        if (!empty($missingDocs)) {
+            return back()->withErrors(['documents' => 'Please upload all required documents: ' . implode(', ', $missingDocs)]);
+        }
+        
+        return $this->advanceStep($application, 7);
+    }
 
-        // 2. Handle File Uploads
-        $documents = [];
-        if ($request->hasFile('passport_photo')) {
-            $path = $request->file('passport_photo')->store('applications/photos', 'public');
-            $documents['passport_photo'] = $path;
-        }
-        if ($request->hasFile('csee_certificate')) {
-            $path = $request->file('csee_certificate')->store('applications/certificates', 'public');
-            $documents['csee_certificate'] = $path;
-        }
-        if ($request->hasFile('birth_certificate')) {
-            $path = $request->file('birth_certificate')->store('applications/certificates', 'public');
-            $documents['birth_certificate'] = $path;
-        }
-
-        // 3. Generate Application Number
+    public function storeStep8(StoreStep8Request $request)
+    {
+        $application = $this->getApplication();
+        
+        // Final Submission
         $year = date('Y');
-        $count = Application::whereYear('created_at', $year)->count() + 1;
+        $count = Application::whereYear('created_at', $year)->where('status', '!=', 'draft')->count() + 1;
         $appNumber = 'KIBIHAS-APP-' . $year . '-' . str_pad($count, 6, '0', STR_PAD_LEFT);
-
-        // 4. Create Application
-        $application = Application::create([
-            'application_number' => $appNumber,
-            'user_id' => $user->id,
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'program_id' => $request->program_id,
+        
+        $application->update([
+            'declaration_accepted' => true,
             'status' => 'submitted',
-            'biodata' => [
-                'dob' => $request->dob,
-                'gender' => $request->gender,
-                'nationality' => $request->nationality,
-                'address' => $request->address ?? '',
-            ],
-            'education_background' => [
-                'index_number' => $request->index_number,
-                'school_name' => $request->school_name,
-                'completion_year' => $request->completion_year,
-            ],
-            'documents' => $documents,
+            'submitted_at' => now(),
+            'application_number' => $appNumber,
         ]);
+        
+        return redirect()->route('application.status');
+    }
 
-        // 5. Login
-        Auth::login($user);
+    private function getApplication()
+    {
+        return Application::where('user_id', Auth::id())->latest()->firstOrFail();
+    }
 
-        return redirect()->route('dashboard')->with('success', 'Application submitted successfully! Your Application Number is ' . $appNumber);
+    private function advanceStep(Application $application, int $currentStep)
+    {
+        // Only update current_step if we are progressing further than before
+        if ($currentStep + 1 > $application->current_step) {
+            $application->update(['current_step' => $currentStep + 1]);
+        }
+        
+        return redirect()->route('application.step', ['step' => $currentStep + 1]);
     }
 
     public function track()
     {
-        $user = Auth::user();
-        $application = Application::where('user_id', $user->id)->latest()->first();
-        
-        if (!$application) {
-            return redirect()->route('application.create');
-        }
-
+        $application = Application::where('user_id', Auth::id())->latest()->first();
         return view('application.status', compact('application'));
     }
 
-    public function showTracking(Request $request)
+    public function print()
     {
-        $request->validate([
-            'application_number' => 'required|exists:applications,application_number',
-        ]);
+        $application = $this->getApplication();
         
-        $application = Application::where('application_number', $request->application_number)->first();
+        // Ensure application is submitted before printing
+        if ($application->status === 'draft') {
+            return redirect()->route('application.status')->with('error', 'You must submit your application before printing.');
+        }
+
+        $application->load(['program', 'academicYear', 'user']);
         
-        return view('application.status', compact('application'));
+        $pdf = Pdf::loadView('application.print', compact('application'));
+        $pdf->setPaper('a4', 'portrait');
+        
+        return $pdf->stream('KIBIHAS_Application_' . $application->application_number . '.pdf');
     }
 }

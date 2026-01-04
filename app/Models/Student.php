@@ -98,6 +98,11 @@ class Student extends Model
         return $this->invoices()->sum('balance');
     }
 
+    public function uploadedDocuments()
+    {
+        return $this->morphMany(Document::class, 'documentable');
+    }
+
     public function isFeeCleared()
     {
         // Use service logic or simple check

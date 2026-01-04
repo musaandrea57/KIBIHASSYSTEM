@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('program_id')->constrained()->cascadeOnDelete();
             $table->foreignId('academic_year_id')->constrained();
-            $table->integer('level')->nullable(); // NTA 4, 5, 6
+            $table->integer('nta_level')->nullable(); // NTA 4, 5, 6
             $table->foreignId('semester_id')->nullable()->constrained(); // Nullable for annual fees
             $table->string('name'); // e.g., "NTA 4 Tuition Fee 2025/2026"
             $table->boolean('is_active')->default(true);

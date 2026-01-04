@@ -158,6 +158,59 @@ return [
             ],
         ],
 
+        'principal' => [
+            [
+                'heading' => 'Executive',
+                'items' => [
+                    [
+                        'label' => 'Dashboard',
+                        'route' => 'principal.dashboard',
+                        'icon' => 'home',
+                    ],
+                    [
+                        'label' => 'My Profile',
+                        'route' => 'principal.profile',
+                        'icon' => 'user',
+                    ],
+                ],
+            ],
+            [
+                'heading' => 'Governance',
+                'items' => [
+                    [
+                        'label' => 'Teacher Performance',
+                        'route' => 'principal.teachers',
+                        'icon' => 'users',
+                    ],
+                    [
+                        'label' => 'Academic Reports',
+                        'route' => 'principal.reports.index',
+                        'icon' => 'chart-bar',
+                    ],
+                    [
+                        'label' => 'Student Performance',
+                        'route' => 'principal.student-performance.index',
+                        'icon' => 'academic-cap',
+                    ],
+                ],
+            ],
+            [
+                'heading' => 'Communication',
+                'items' => [
+                    [
+                        'label' => 'Messages',
+                        'route' => 'messages.index',
+                        'icon' => 'envelope',
+                    ],
+                    [
+                        'label' => 'Announcements',
+                        'route' => 'principal.announcements',
+                        'icon' => 'megaphone',
+                    ],
+                ],
+            ],
+        ],
+
         'academic_staff' => [
             [
                 'heading' => 'Dashboard',
@@ -405,44 +458,6 @@ return [
                         'route' => 'messages.index',
                         'icon' => 'chat-bubble-left-right',
                     ],
-                ]
-            ]
-        ],
-
-        'principal' => [
-            [
-                'heading' => 'Dashboard',
-                'items' => [
-                    [
-                        'label' => 'Dashboard',
-                        'route' => 'dashboard',
-                        'icon' => 'home',
-                    ],
-                ],
-            ],
-            [
-                'heading' => 'WELFARE',
-                'items' => [
-                    [
-                        'label' => 'Reports',
-                        'icon' => 'chart-bar',
-                        'children' => [
-                            ['label' => 'NHIF Compliance', 'route' => 'admin.welfare.reports.nhif'],
-                            ['label' => 'Hostel Occupancy', 'route' => 'admin.welfare.reports.hostel'],
-                        ],
-                    ],
-                ],
-            ],
-            // Hidden: Teacher Performance, Academic Reports, Student Performance
-            [
-                'heading' => 'COMMUNICATION',
-                'items' => [
-                    [
-                        'label' => 'Messages',
-                        'route' => 'messages.index',
-                        'icon' => 'chat-bubble-left-right',
-                    ],
-                    // Hidden: Announcements
                 ]
             ]
         ],

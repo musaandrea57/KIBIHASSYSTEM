@@ -108,7 +108,7 @@
                     <div class="p-6 text-center">
                         <h3 class="text-xl font-bold text-gray-900 mb-2">No Active Application Found</h3>
                         <p class="text-gray-600 mb-6">You haven't submitted an application yet.</p>
-                        <a href="{{ route('application.create') }}" class="inline-block bg-secondary text-primary-900 font-bold py-3 px-8 rounded hover:bg-secondary-600 transition">
+                        <a href="{{ route('application.register') }}" class="inline-block bg-secondary text-primary-900 font-bold py-3 px-8 rounded hover:bg-secondary-600 transition">
                             Start New Application
                         </a>
                     </div>

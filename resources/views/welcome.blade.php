@@ -45,7 +45,7 @@
                 <h1 class="text-4xl md:text-6xl font-serif font-bold leading-tight mb-6">Excellence in Health Science Education</h1>
                 <p class="text-lg md:text-xl text-gray-200 mb-8">Empowering the next generation of healthcare professionals with knowledge, skills, and integrity.</p>
                 <div class="flex space-x-4">
-                    <a href="{{ route('application.create') }}" class="bg-secondary text-primary-900 font-bold py-3 px-8 rounded hover:bg-white transition duration-300">Apply Now</a>
+                    <a href="{{ route('application.register') }}" class="bg-secondary text-primary-900 font-bold py-3 px-8 rounded hover:bg-white transition duration-300">Apply Now</a>
                     <a href="{{ route('about') }}" class="border-2 border-white text-white font-bold py-3 px-8 rounded hover:bg-white hover:text-primary-900 transition duration-300">Learn More</a>
                 </div>
             </div>
@@ -110,7 +110,7 @@
                     <div class="p-6">
                         <h3 class="text-xl font-bold text-primary-900 mb-2">{{ $program->name }}</h3>
                         <p class="text-sm text-gray-500 mb-4">Duration: {{ $program->duration_years }} Years | Level: Diploma (NTA 4-6)</p>
-                        <a href="{{ route('application.create') }}?program={{ $program->id }}" class="block w-full text-center bg-primary-600 text-white py-2 rounded hover:bg-primary-700 transition">Apply Now</a>
+                        <a href="{{ route('application.register') }}?program={{ $program->id }}" class="block w-full text-center bg-primary-600 text-white py-2 rounded hover:bg-primary-700 transition">Apply Now</a>
                     </div>
                 </div>
                 @endforeach
@@ -125,7 +125,7 @@
                 <h2 class="text-2xl font-bold text-primary-900 mb-2">Ready to start your journey?</h2>
                 <p class="text-primary-800">Applications for the {{ date('Y') }}/{{ date('Y')+1 }} academic year are now open.</p>
             </div>
-            <a href="{{ route('application.create') }}" class="bg-primary-900 text-white font-bold py-3 px-8 rounded shadow-lg hover:bg-primary-800 transition">Apply Online</a>
+            <a href="{{ route('application.register') }}" class="bg-primary-900 text-white font-bold py-3 px-8 rounded shadow-lg hover:bg-primary-800 transition">Apply Online</a>
         </div>
     </div>
 </x-public-layout>

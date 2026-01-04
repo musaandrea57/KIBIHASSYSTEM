@@ -1,113 +1,78 @@
-@extends('layouts.portal')
+@extends('layouts.applicant')
 
 @section('content')
-    <div class="mb-6"><h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Application Dashboard') }}
-        </h2></div>
-
-    <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 bg-white border-b border-gray-200">
-                    <div class="mb-8 text-center">
-                        <h2 class="text-2xl font-bold text-gray-900">Application Status</h2>
-                        <p class="text-gray-500">Application Number: <span class="font-mono font-bold text-primary-600">{{ $application->application_number }}</span></p>
+<div class="text-center py-12">
+    @if($application->status === 'submitted' || $application->status === 'pending_review')
+        <div class="mx-auto flex items-center justify-center h-24 w-24 rounded-full bg-green-100 mb-6">
+            <svg class="h-12 w-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+        </div>
+        <h2 class="text-3xl font-extrabold text-gray-900">Application Submitted!</h2>
+        <p class="mt-4 text-lg text-gray-600">Your application has been successfully received and is under review.</p>
+        
+        <div class="mt-8 bg-white shadow overflow-hidden sm:rounded-lg max-w-2xl mx-auto text-left">
+            <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Application Details</h3>
+            </div>
+            <div class="px-4 py-5 sm:p-6">
+                <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                    <div class="sm:col-span-1">
+                        <dt class="text-sm font-medium text-gray-500">Application Number</dt>
+                        <dd class="mt-1 text-sm text-gray-900 font-bold">{{ $application->application_number }}</dd>
                     </div>
-
-                    <!-- Status Timeline -->
-                    <div class="relative py-8">
-                        <div class="absolute inset-0 flex items-center" aria-hidden="true">
-                            <div class="w-full border-t border-gray-200">
-                        <div class="relative flex justify-between">
-                            @php
-                                $statuses = ['submitted', 'under_review', 'approved', 'admitted'];
-                                $currentStatus = $application->status;
-                                $statusIndex = array_search($currentStatus, $statuses);
-                                if ($statusIndex === false && $currentStatus == 'rejected') $statusIndex = -1;
-                            @endphp
-
-                            @foreach($statuses as $index => $status)
-                                <div class="flex flex-col items-center">
-                                    <div class="h-8 w-8 rounded-full flex items-center justify-center {{ $index <= $statusIndex ? 'bg-green-600' : 'bg-gray-200' }}">
-                                        @if($index <= $statusIndex)
-                                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                        @else
-                                            <span class="text-xs text-gray-500 font-bold">{{ $index + 1 }}</span>
-                                        @endif
-                                    </div>
-                                    <div class="mt-2 text-sm font-medium {{ $index <= $statusIndex ? 'text-green-600' : 'text-gray-500' }}">
-                                        {{ ucwords(str_replace('_', ' ', $status)) }}
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
+                    <div class="sm:col-span-1">
+                        <dt class="text-sm font-medium text-gray-500">Submission Date</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ $application->submitted_at->format('d M Y, H:i') }}</dd>
                     </div>
-
-                    @if($application->status == 'rejected')
-                        <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
-                            <div class="flex">
-                                <div class="flex-shrink-0">
-                                    <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                                    </svg>
-                                </div>
-                                <div class="ml-3">
-                                    <p class="text-sm text-red-700">
-                                        Your application has been rejected. Please contact the admission office for more details.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    @endif
-
-                    <!-- Application Details -->
-                    <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <h3 class="text-lg font-medium text-gray-900 mb-4">Personal Information</h3>
-                            <dl class="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
-                                <div class="sm:col-span-1">
-                                    <dt class="text-sm font-medium text-gray-500">Full Name</dt>
-                                    <dd class="mt-1 text-sm text-gray-900">{{ $application->first_name }} {{ $application->last_name }}</dd>
-                                </div>
-                                <div class="sm:col-span-1">
-                                    <dt class="text-sm font-medium text-gray-500">Email</dt>
-                                    <dd class="mt-1 text-sm text-gray-900">{{ $application->email }}</dd>
-                                </div>
-                                <div class="sm:col-span-1">
-                                    <dt class="text-sm font-medium text-gray-500">Phone</dt>
-                                    <dd class="mt-1 text-sm text-gray-900">{{ $application->phone }}</dd>
-                                </div>
-                                <div class="sm:col-span-1">
-                                    <dt class="text-sm font-medium text-gray-500">Program</dt>
-                                    <dd class="mt-1 text-sm text-gray-900">{{ $application->program->name }}</dd>
-                                </div>
-                            </dl>
-                        </div>
-                        
-                        <div>
-                            <h3 class="text-lg font-medium text-gray-900 mb-4">Documents</h3>
-                            <ul class="border border-gray-200 rounded-md divide-y divide-gray-200">
-                                @foreach($application->documents as $type => $path)
-                                    <li class="pl-3 pr-4 py-3 flex items-center justify-between text-sm">
-                                        <div class="w-0 flex-1 flex items-center">
-                                            <svg class="flex-shrink-0 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                                <path fill-rule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clip-rule="evenodd" />
-                                            </svg>
-                                            <span class="ml-2 flex-1 w-0 truncate">
-                                                {{ ucwords(str_replace('_', ' ', $type)) }}
-                                            </span>
-                                        </div>
-                                        <div class="ml-4 flex-shrink-0">
-                                            <a href="{{ Storage::url($path) }}" target="_blank" class="font-medium text-primary-600 hover:text-primary-500">
-                                                View
-                                            </a>
-                                        </div>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        </div>
+                    <div class="sm:col-span-1">
+                        <dt class="text-sm font-medium text-gray-500">Status</dt>
+                        <dd class="mt-1">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                Pending Review
+                            </span>
+                        </dd>
                     </div>
-                </div>
+                    <div class="sm:col-span-1">
+                        <dt class="text-sm font-medium text-gray-500">Programme</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ $application->program->name ?? 'N/A' }}</dd>
+                    </div>
+                </dl>
             </div>
         </div>
-    </div>
 
+        <div class="mt-8">
+            <a href="{{ route('application.print') }}" target="_blank" class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                Print Application Form
+            </a>
+        </div>
+    @elseif($application->status === 'approved')
+        <div class="mx-auto flex items-center justify-center h-24 w-24 rounded-full bg-blue-100 mb-6">
+            <svg class="h-12 w-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+        </div>
+        <h2 class="text-3xl font-extrabold text-gray-900">Congratulations!</h2>
+        <p class="mt-4 text-lg text-gray-600">Your application has been approved.</p>
+        <p class="mt-2 text-sm text-gray-500">Please check your email for admission letter and joining instructions.</p>
+    @elseif($application->status === 'rejected')
+        <div class="mx-auto flex items-center justify-center h-24 w-24 rounded-full bg-red-100 mb-6">
+            <svg class="h-12 w-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+        </div>
+        <h2 class="text-3xl font-extrabold text-gray-900">Application Update</h2>
+        <p class="mt-4 text-lg text-gray-600">Your application was not successful.</p>
+    @else
+        <!-- Draft State -->
+        <h2 class="text-2xl font-bold text-gray-900">Application in Progress</h2>
+        <p class="mt-2 text-gray-600">You have an incomplete application.</p>
+        <div class="mt-6">
+            <a href="{{ route('application.step', ['step' => $application->current_step]) }}" class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
+                Continue Application (Step {{ $application->current_step }})
+            </a>
+        </div>
+    @endif
+</div>
 @endsection

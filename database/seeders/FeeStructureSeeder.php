@@ -53,9 +53,9 @@ class FeeStructureSeeder extends Seeder
             $academicYear = AcademicYear::create(['name' => '2025/2026', 'start_date' => '2025-10-01', 'end_date' => '2026-09-30', 'status' => 'active']);
         }
         
-        $semester = Semester::where('name', 'Semester I')->first();
+        $semester = Semester::where('name', 'Semester 1')->first();
         if (!$semester) {
-             $semester = Semester::create(['name' => 'Semester I', 'academic_year_id' => $academicYear->id, 'start_date' => '2025-10-01', 'end_date' => '2026-03-30', 'status' => 'active']);
+             $semester = Semester::create(['name' => 'Semester 1', 'number' => 1, 'is_active' => true]);
         }
 
         $programs = Program::whereIn('code', ['NMT', 'CDT', 'CRT'])->get();

@@ -15,7 +15,15 @@ class Message extends Model
         'subject',
         'body',
         'type',
+        'classification',
+        'channels',
+        'target_audience_filters',
         'parent_id',
+    ];
+
+    protected $casts = [
+        'channels' => 'array',
+        'target_audience_filters' => 'array',
     ];
 
     public function sender()
@@ -30,7 +38,7 @@ class Message extends Model
 
     public function attachments()
     {
-        return $this->hasMany(Attachment::class);
+        return $this->morphMany(Attachment::class, 'attachable');
     }
 
     public function parent()

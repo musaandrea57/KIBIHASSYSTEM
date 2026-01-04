@@ -85,12 +85,12 @@ class ModuleAssignmentController extends Controller
             
             ModuleAssignment::updateOrCreate(
                 [
-                    'module_id' => $offering->module_id,
-                    'academic_year_id' => $offering->academic_year_id,
-                    'semester_id' => $offering->semester_id,
+                    'module_offering_id' => $offering->id,
                 ],
                 [
-                    'user_id' => $request->teacher_user_id,
+                    'teacher_user_id' => $request->teacher_user_id,
+                    'assigned_by_user_id' => Auth::id(),
+                    'status' => 'active',
                 ]
             );
         });

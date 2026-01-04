@@ -15,6 +15,11 @@ class Department extends Model
         'is_active' => 'boolean',
     ];
 
+    public function programs()
+    {
+        return $this->hasMany(Program::class);
+    }
+
     public function staffProfiles()
     {
         return $this->hasMany(StaffProfile::class);

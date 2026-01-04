@@ -24,8 +24,8 @@ class AcademicSeeder extends Seeder
         // Academic Years
         $y25 = AcademicYear::create(['name' => '2025/2026', 'start_date' => '2025-09-01', 'end_date' => '2026-07-30', 'is_active' => true]);
         
-        Semester::create(['name' => 'Semester 1', 'academic_year_id' => $y25->id, 'is_active' => true]);
-        Semester::create(['name' => 'Semester 2', 'academic_year_id' => $y25->id, 'is_active' => false]);
+        Semester::create(['name' => 'Semester 1', 'number' => 1, 'is_active' => true]);
+        Semester::create(['name' => 'Semester 2', 'number' => 2, 'is_active' => false]);
 
         // Modules - Nursing NTA 4 Sem 1
         Module::create(['code' => 'NUR04101', 'name' => 'Anatomy and Physiology', 'credits' => 12, 'program_id' => $nursing->id, 'nta_level' => 4, 'semester_number' => 1]);

@@ -39,4 +39,21 @@ class ModuleOffering extends Model
     {
         return $this->hasMany(ModuleResult::class);
     }
+
+    public function evaluations()
+    {
+        return $this->hasMany(Evaluation::class);
+    }
+
+    public function teacher()
+    {
+        return $this->hasOneThrough(
+            User::class,
+            ModuleAssignment::class,
+            'module_offering_id', // Foreign key on module_assignments table...
+            'id', // Foreign key on users table...
+            'id', // Local key on module_offerings table...
+            'user_id' // Local key on module_assignments table...
+        )->where('module_assignments.status', 'active');
+    }
 }

@@ -9,15 +9,19 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Barryvdh\DomPDF\Facade\Pdf; 
 use App\Services\FeeClearanceService;
+use App\Services\FinanceSummaryService;
 use App\Models\AcademicYear;
+use App\Models\FeeStructure;
 
 class FinanceController extends Controller
 {
     protected $feeService;
+    protected $financeSummaryService;
 
-    public function __construct(FeeClearanceService $feeService)
+    public function __construct(FeeClearanceService $feeService, FinanceSummaryService $financeSummaryService)
     {
         $this->feeService = $feeService;
+        $this->financeSummaryService = $financeSummaryService;
     }
 
     public function index()
@@ -28,30 +32,19 @@ class FinanceController extends Controller
             return redirect()->route('dashboard')->with('error', 'Student record not found.');
         }
 
-        // Summary stats
-        $totalInvoiced = $student->invoices()->sum('subtotal'); // or total if tax included
-        // Actually Invoice has subtotal. Let's assume subtotal is final for now or calculate total.
-        // Wait, invoice items sum up to subtotal.
+        $summary = $this->financeSummaryService->getSummary($student);
         
-        // Let's use recalculated totals to be safe, or just sum columns.
-        // Ideally we should have a `total` column on invoice but we have `subtotal`.
-        
-        $totalPaid = $student->payments()->where('status', 'posted')->sum('amount');
-        $outstandingBalance = $student->invoices()->where('status', '!=', 'voided')->sum('balance');
-        
-        $recentInvoices = $student->invoices()
+        $invoices = $student->invoices()
             ->with(['academicYear', 'semester'])
             ->latest()
-            ->take(5)
-            ->get();
-            
-        $recentPayments = $student->payments()
-            ->with(['invoice'])
-            ->latest()
-            ->take(5)
             ->get();
 
-        return view('student.finance.index', compact('totalInvoiced', 'totalPaid', 'outstandingBalance', 'recentInvoices', 'recentPayments'));
+        $payments = $student->payments()
+            ->with(['invoice'])
+            ->latest()
+            ->get();
+
+        return view('student.finance.index', array_merge($summary, compact('invoices', 'payments')));
     }
 
     public function invoices()
@@ -89,6 +82,145 @@ class FinanceController extends Controller
 
         $pdf = Pdf::loadView('admin.finance.payments.receipt_pdf', compact('payment'));
         return $pdf->download("receipt-{$payment->payment_reference}.pdf");
+    }
+
+    public function printInstallment(Request $request)
+    {
+        $installmentKey = $request->query('installment');
+        if (!in_array($installmentKey, ['oct', 'jan', 'apr'])) {
+            abort(404);
+        }
+
+        $student = Auth::user()->student;
+        
+        // 1. Get Fee Structure
+        $activeYear = $student->currentAcademicYear;
+        $activeSemester = $student->currentSemester;
+
+        $feeStructure = FeeStructure::where('program_id', $student->program_id)
+            ->where('academic_year_id', $activeYear->id)
+            ->where('semester_id', $activeSemester->id)
+            ->where('nta_level', $student->current_nta_level)
+            ->active()
+            ->with('items.feeItem')
+            ->first();
+
+        if (!$feeStructure) {
+            // Fallback for annual structure
+            $feeStructure = FeeStructure::where('program_id', $student->program_id)
+                ->where('academic_year_id', $activeYear->id)
+                ->whereNull('semester_id')
+                ->where('nta_level', $student->current_nta_level)
+                ->active()
+                ->with('items.feeItem')
+                ->first();
+        }
+
+        if (!$feeStructure) {
+            return redirect()->back()->with('error', 'Fee structure not found.');
+        }
+
+        // 2. Build Virtual Invoice Items
+        $items = collect();
+        $totalAmount = 0;
+
+        foreach ($feeStructure->items as $item) {
+            $amount = 0;
+            if ($installmentKey === 'oct') $amount = $item->amount_oct;
+            elseif ($installmentKey === 'jan') $amount = $item->amount_jan;
+            elseif ($installmentKey === 'apr') $amount = $item->amount_apr;
+
+            if ($amount > 0) {
+                // Create a virtual item object
+                $virtualItem = new \stdClass();
+                $virtualItem->amount = $amount;
+                $virtualItem->description = null;
+                $virtualItem->feeItem = $item->feeItem;
+                $items->push($virtualItem);
+                $totalAmount += $amount;
+            }
+        }
+
+        // 3. Create Virtual Invoice Object
+        $invoice = new \stdClass();
+        $invoice->invoice_number = strtoupper($installmentKey) . '-' . $student->registration_number;
+        $invoice->created_at = now();
+        $invoice->due_date = \Carbon\Carbon::now()->addDays(30); 
+        
+        // Get status from summary service
+        $summary = $this->financeSummaryService->getSummary($student);
+        $instStatus = $summary['installments'][$installmentKey]['status'] ?? 'pending';
+        $instPaid = $summary['installments'][$installmentKey]['paid'] ?? 0;
+        
+        $invoice->status = ucfirst($instStatus);
+        $invoice->items = $items;
+        $invoice->subtotal = $totalAmount;
+        $invoice->total_paid = $instPaid;
+        $invoice->balance = max(0, $totalAmount - $instPaid);
+
+        $pdf = Pdf::loadView('student.finance.invoice_pdf', compact('invoice', 'student'));
+        return $pdf->download("bill-{$installmentKey}.pdf");
+    }
+
+    public function statement()
+    {
+        $student = Auth::user()->student;
+        $summary = $this->financeSummaryService->getSummary($student);
+        
+        $invoices = $student->invoices()->where('status', '!=', 'voided')->get()->map(function($inv) {
+            return [
+                'date' => $inv->created_at,
+                'description' => "Invoice #" . $inv->invoice_number,
+                'reference' => $inv->invoice_number,
+                'amount' => $inv->subtotal,
+                'type' => 'invoice'
+            ];
+        });
+        
+        $payments = $student->payments()->where('status', 'posted')->get()->map(function($pmt) {
+            return [
+                'date' => $pmt->payment_date,
+                'description' => "Payment via " . $pmt->payment_method,
+                'reference' => $pmt->transaction_reference,
+                'amount' => $pmt->amount,
+                'type' => 'payment'
+            ];
+        });
+        
+        $transactions = $invoices->merge($payments)->sortBy('date');
+        
+        $pdf = Pdf::loadView('student.finance.statement_pdf', [
+            'student' => $student,
+            'totals' => $summary['totals'],
+            'transactions' => $transactions
+        ]);
+        
+        return $pdf->download('financial_statement.pdf');
+    }
+
+    public function paymentInfo()
+    {
+        $student = Auth::user()->student;
+        $invoices = $student->invoices()
+            ->where('status', '!=', 'paid')
+            ->where('status', '!=', 'voided')
+            ->latest()
+            ->get();
+
+        return view('student.finance.payment_info', compact('invoices'));
+    }
+
+    public function showInvoice(Invoice $invoice)
+    {
+        if ($invoice->student_id !== Auth::user()->student->id) {
+            abort(403);
+        }
+        
+        $student = Auth::user()->student;
+        $invoice->load(['items.feeItem', 'academicYear', 'semester']);
+        
+        $pdf = Pdf::loadView('student.finance.invoice_pdf', compact('invoice', 'student'));
+        return $pdf->download("invoice-{$invoice->invoice_number}.pdf");
     }
 
     public function clearanceRequired()

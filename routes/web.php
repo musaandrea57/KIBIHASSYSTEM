@@ -23,6 +23,9 @@ use App\Http\Controllers\Teacher\DashboardController as TeacherDashboardControll
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
 use App\Http\Controllers\AcademicStaff\DashboardController as AcademicStaffDashboardController;
 use App\Http\Controllers\Principal\DashboardController as PrincipalDashboardController;
+use App\Http\Controllers\Principal\TeacherPerformanceController;
+use App\Http\Controllers\Principal\AcademicReportsController;
+use App\Http\Controllers\Principal\StudentPerformanceController;
 use App\Http\Controllers\Student\RegistrationController as StudentRegistrationController;
 use App\Http\Controllers\Admin\RegistrationController as AdminRegistrationController;
 use App\Http\Controllers\MessageController;
@@ -72,6 +75,11 @@ Route::middleware('auth')->group(function () {
     });
 });
 
+// Attachment Routes
+Route::middleware('auth')->group(function () {
+    Route::get('attachments/{attachment}/download', [\App\Http\Controllers\AttachmentController::class, 'download'])->name('attachments.download');
+});
+
 // Message Routes
 Route::middleware('auth')->prefix('messages')->name('messages.')->group(function () {
     Route::get('/', [MessageController::class, 'index'])->name('index');
@@ -82,16 +90,32 @@ Route::middleware('auth')->prefix('messages')->name('messages.')->group(function
     Route::post('/{message}/acknowledge', [MessageController::class, 'acknowledge'])->name('acknowledge');
 });
 
-// Application Routes
-Route::middleware(['auth', 'role:applicant'])->prefix('application')->name('application.')->group(function () {
-    Route::get('/create', [ApplicationController::class, 'create'])->name('create');
-    Route::post('/store', [ApplicationController::class, 'store'])->name('store');
-    Route::get('/status', [ApplicationController::class, 'track'])->name('status');
-});
+// Application Routes (Public Step 1)
+Route::get('/application/register', [ApplicationController::class, 'showStep1'])->name('application.register');
+Route::post('/application/register', [ApplicationController::class, 'storeStep1'])->name('application.register.store');
+
+// Application Routes (Protected Steps 2-8)
+    Route::middleware(['auth', 'role:applicant'])->prefix('application')->name('application.')->group(function () {
+        Route::get('/status', [ApplicationController::class, 'track'])->name('status');
+        Route::get('/print', [ApplicationController::class, 'print'])->name('print');
+        
+        // Explicit POST routes for each step to allow Form Request injection
+        Route::post('/step/2', [ApplicationController::class, 'storeStep2'])->name('step2.store');
+        Route::post('/step/3', [ApplicationController::class, 'storeStep3'])->name('step3.store');
+        Route::post('/step/4', [ApplicationController::class, 'storeStep4'])->name('step4.store');
+        Route::post('/step/5', [ApplicationController::class, 'storeStep5'])->name('step5.store');
+        Route::post('/step/6', [ApplicationController::class, 'storeStep6'])->name('step6.store');
+        Route::post('/step/7', [ApplicationController::class, 'storeStep7'])->name('step7.store');
+        Route::post('/step/8', [ApplicationController::class, 'storeStep8'])->name('step8.store');
+
+        // Fallback GET for steps
+        Route::get('/step/{step}', [ApplicationController::class, 'showStep'])->name('step');
+    });
 
 // Student Routes
 Route::middleware(['auth', 'role:student'])->prefix('student')->name('student.')->group(function () {
     Route::get('/dashboard', [StudentDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/profile/download', [StudentDashboardController::class, 'downloadProfile'])->name('profile.download');
     Route::post('/photo/update', [StudentDashboardController::class, 'updatePhoto'])->name('photo.update');
     Route::post('/courses/register', [StudentDashboardController::class, 'registerCourses'])->name('courses.register');
     // Registration
@@ -107,8 +131,12 @@ Route::middleware(['auth', 'role:student'])->prefix('student')->name('student.')
     Route::prefix('finance')->name('finance.')->group(function () {
         Route::get('/', [\App\Http\Controllers\Student\FinanceController::class, 'index'])->name('index');
         Route::get('/invoices', [\App\Http\Controllers\Student\FinanceController::class, 'invoices'])->name('invoices');
+        Route::get('/invoices/{invoice}', [\App\Http\Controllers\Student\FinanceController::class, 'showInvoice'])->name('invoice.show');
         Route::get('/payments', [\App\Http\Controllers\Student\FinanceController::class, 'payments'])->name('payments');
         Route::get('/receipts/{payment}', [\App\Http\Controllers\Student\FinanceController::class, 'receipt'])->name('receipt');
+        Route::get('/statement', [\App\Http\Controllers\Student\FinanceController::class, 'statement'])->name('statement');
+        Route::get('/payment-info', [\App\Http\Controllers\Student\FinanceController::class, 'paymentInfo'])->name('payment_info');
+        Route::get('/installment-bill', [\App\Http\Controllers\Student\FinanceController::class, 'printInstallment'])->name('print_installment');
         Route::get('/clearance-required', [\App\Http\Controllers\Student\FinanceController::class, 'clearanceRequired'])->name('clearance_required');
     });
 
@@ -116,10 +144,14 @@ Route::middleware(['auth', 'role:student'])->prefix('student')->name('student.')
     Route::middleware(['fee_cleared'])->group(function () {
         Route::get('/results-center', [\App\Http\Controllers\Student\ResultsCenterController::class, 'index'])->name('results.index');
         // Route::get('/results', [StudentDashboardController::class, 'results'])->name('results');
-        Route::get('/continuous-assessment', [StudentDashboardController::class, 'continuousAssessment'])->name('continuous_assessment'); // Placeholder
         Route::get('/transcript', [StudentDashboardController::class, 'transcript'])->name('transcript'); // Placeholder
         Route::get('/official-results', [StudentDashboardController::class, 'officialResults'])->name('official_results'); // Placeholder
     });
+
+    // Coursework with specific clearance check
+    Route::get('/continuous-assessment', [StudentDashboardController::class, 'continuousAssessment'])
+        ->middleware(['coursework_clearance'])
+        ->name('continuous_assessment');
 
     // Welfare (Module 7)
     Route::prefix('nhif')->name('nhif.')->group(function () {
@@ -139,6 +171,17 @@ Route::middleware(['auth', 'role:academic_staff'])->prefix('academic-staff')->na
 // Principal Routes
 Route::middleware(['auth', 'role:principal'])->prefix('principal')->name('principal.')->group(function () {
     Route::get('/dashboard', [PrincipalDashboardController::class, 'index'])->name('dashboard');
+
+    // Student Performance
+    Route::prefix('student-performance')->name('student-performance.')->group(function () {
+        Route::get('/', [StudentPerformanceController::class, 'index'])->name('index');
+        Route::get('/programme', [StudentPerformanceController::class, 'programme'])->name('programme');
+        Route::get('/cohort', [StudentPerformanceController::class, 'cohort'])->name('cohort');
+        Route::get('/at-risk', [StudentPerformanceController::class, 'atRisk'])->name('at-risk');
+        Route::get('/list', [StudentPerformanceController::class, 'list'])->name('list');
+        Route::get('/export', [StudentPerformanceController::class, 'export'])->name('export');
+        Route::get('/student/{student}', [StudentPerformanceController::class, 'show'])->name('show');
+    });
 });
 
 // Teacher Routes
@@ -154,6 +197,7 @@ Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->name('teacher.')
     Route::post('/marks/{offering}', [\App\Http\Controllers\Teacher\MarksEntryController::class, 'store'])->name('marks.store');
     Route::post('/marks/{offering}/submit', [\App\Http\Controllers\Teacher\MarksEntryController::class, 'submit'])->name('marks.submit');
     Route::post('/marks/{offering}/import', [\App\Http\Controllers\Teacher\MarksEntryController::class, 'import'])->name('marks.import');
+    Route::post('/marks/{offering}/toggle-release', [\App\Http\Controllers\Teacher\MarksEntryController::class, 'toggleRelease'])->name('marks.toggle-release');
 });
 
 // Accountant Routes
@@ -170,6 +214,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/admissions/{application}', [AdmissionController::class, 'show'])->name('admissions.show');
     Route::post('/admissions/{application}/approve', [AdmissionController::class, 'approve'])->name('admissions.approve');
     Route::post('/admissions/{application}/reject', [AdmissionController::class, 'reject'])->name('admissions.reject');
+    Route::post('/admissions/{application}/request-correction', [AdmissionController::class, 'requestCorrection'])->name('admissions.request_correction');
 
     // Students
     Route::get('/students', [AdminStudentController::class, 'index'])->name('students.index');
@@ -386,6 +431,60 @@ Route::middleware(['auth', 'role:admin|academic_staff'])->prefix('academic-setup
     Route::resource('semesters', SemesterController::class)->only(['index']);
     Route::resource('modules', ModuleController::class);
     Route::resource('module-offerings', ModuleOfferingController::class);
+});
+
+// Principal Module Routes
+Route::middleware(['auth', 'role:principal'])->prefix('principal')->name('principal.')->group(function () {
+    // Dashboard
+    Route::get('/dashboard', [PrincipalDashboardController::class, 'index'])->name('dashboard');
+
+    // Academic Reports
+    Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('/', [AcademicReportsController::class, 'index'])->name('index');
+        Route::get('/performance', [AcademicReportsController::class, 'performance'])->name('performance');
+        Route::get('/registration', [AcademicReportsController::class, 'registration'])->name('registration');
+        Route::get('/progression', [AcademicReportsController::class, 'progression'])->name('progression');
+        Route::get('/workflow', [AcademicReportsController::class, 'workflow'])->name('workflow');
+        Route::get('/compliance', [AcademicReportsController::class, 'compliance'])->name('compliance');
+        Route::get('/export', [AcademicReportsController::class, 'export'])->name('export');
+    });
+
+    // Profile
+    Route::get('/profile', [\App\Http\Controllers\Principal\ProfileController::class, 'show'])->name('profile');
+    Route::post('/profile', [\App\Http\Controllers\Principal\ProfileController::class, 'update'])->name('profile.update');
+
+    // Teacher Performance Module
+    Route::controller(\App\Http\Controllers\Principal\TeacherPerformanceController::class)->prefix('teachers')->name('teachers.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/alerts', 'alerts')->name('alerts');
+        Route::get('/reports', 'reports')->name('reports');
+        Route::get('/export', 'export')->name('export');
+        Route::get('/module/{moduleOffering}', 'module')->name('module');
+        Route::get('/{teacher}', 'show')->name('show');
+    });
+
+    // Other Governance Links (Placeholders)
+    // Route::get('/teachers', function() { return view('principal.placeholder', ['title' => 'Teacher Performance']); })->name('teachers');
+    Route::get('/academic-reports', function() { return redirect()->route('principal.reports.index'); }); // Redirect old link
+
+
+
+    // Communication Module
+    Route::controller(\App\Http\Controllers\Principal\CommunicationController::class)->prefix('communication')->name('communication.')->group(function () {
+        Route::get('/', 'index')->name('index'); // Inbox
+        Route::get('/sent', 'sent')->name('sent');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('/message/{message}', 'show')->name('show');
+        Route::post('/message/{message}/reply', 'reply')->name('reply');
+        Route::get('/report/{id}/{type}', 'deliveryReport')->name('report');
+        Route::get('/export/{id}/{type}/{format}', 'exportReport')->name('export');
+
+        // Announcements
+        Route::get('/announcements', 'announcements')->name('announcements');
+        Route::get('/announcements/{id}/edit', 'editAnnouncement')->name('announcements.edit');
+        Route::put('/announcements/{id}', 'updateAnnouncement')->name('announcements.update');
+    });
 });
 
 require __DIR__.'/auth.php';

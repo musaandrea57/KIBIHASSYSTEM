@@ -20,14 +20,19 @@ class ModuleAssignment extends Model
         return $this->belongsTo(Module::class);
     }
 
-    public function academicYear()
-    {
-        return $this->belongsTo(AcademicYear::class);
-    }
+    // public function academicYear()
+    // {
+    //     return $this->belongsTo(AcademicYear::class);
+    // }
 
-    public function semester()
+    // public function semester()
+    // {
+    //     return $this->belongsTo(Semester::class);
+    // }
+
+    public function moduleOffering()
     {
-        return $this->belongsTo(Semester::class);
+        return $this->belongsTo(ModuleOffering::class);
     }
 
     public function teacher()

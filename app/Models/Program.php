@@ -14,6 +14,11 @@ class Program extends Model
         'is_active' => 'boolean',
     ];
 
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
+    }
+
     public function modules()
     {
         return $this->hasMany(Module::class);

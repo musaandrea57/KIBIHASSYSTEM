@@ -10,13 +10,24 @@ class Attachment extends Model
     use HasFactory;
 
     protected $fillable = [
-        'message_id',
+        'message_id', // Keep for backward compatibility if needed, but rely on polymorphic
+        'attachable_type',
+        'attachable_id',
         'file_path',
         'file_name',
         'file_type',
         'file_size',
     ];
 
+    /**
+     * Get the parent attachable model (message or announcement).
+     */
+    public function attachable()
+    {
+        return $this->morphTo();
+    }
+    
+    // Deprecated: kept for backward compatibility until fully migrated
     public function message()
     {
         return $this->belongsTo(Message::class);

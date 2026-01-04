@@ -35,7 +35,7 @@ class ResultModuleTest extends TestCase
         // Seed basic academic structure
         $this->program = Program::create(['name' => 'Test Program', 'code' => 'TP', 'min_credits_per_semester' => 15, 'max_credits_per_semester' => 30]);
         $this->academicYear = AcademicYear::create(['name' => '2025/2026', 'start_date' => now(), 'end_date' => now()->addYear(), 'is_active' => true]);
-        $this->semester = Semester::create(['name' => 'Semester 1', 'academic_year_id' => $this->academicYear->id, 'is_active' => true]);
+        $this->semester = Semester::create(['name' => 'Semester 1', 'number' => 1, 'is_active' => true]);
         $this->module = Module::create(['name' => 'Test Module', 'code' => 'TM101', 'credits' => 10, 'program_id' => $this->program->id, 'nta_level' => 4, 'semester_number' => 1]);
     }
 

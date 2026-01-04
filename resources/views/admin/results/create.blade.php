@@ -45,7 +45,7 @@
                                         <label class="block text-sm font-medium text-gray-700">Semester</label>
                                         <select name="semester_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50" required>
                                             <option value="">Select Semester</option>
-                                            @foreach(\App\Models\Semester::where('academic_year_id', \App\Models\AcademicYear::where('is_active', true)->first()->id ?? 1)->get() as $sem)
+                                            @foreach(\App\Models\Semester::all() as $sem)
                                                 <option value="{{ $sem->id }}" {{ request('semester_id') == $sem->id ? 'selected' : '' }}>
                                                     {{ $sem->name }}
                                                 </option>
@@ -72,7 +72,7 @@
                             @csrf
                             <input type="hidden" name="module_id" value="{{ $module->id }}">
                             <input type="hidden" name="semester_id" value="{{ $semester->id }}">
-                            <input type="hidden" name="academic_year_id" value="{{ $semester->academic_year_id }}">
+                            <input type="hidden" name="academic_year_id" value="{{ \App\Models\AcademicYear::where('is_active', true)->value('id') ?? 1 }}">
 
                             <div class="overflow-x-auto mb-6">
                                 <table class="min-w-full divide-y divide-gray-200">
